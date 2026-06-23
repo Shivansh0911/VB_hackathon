@@ -10,10 +10,28 @@ from database import init_db, get_stats
 from scheduler import start_scheduler
 from routers import issues, confirmations, admin
 
+async def _boot_discovery():
+    """If DB is empty on startup, run discovery for one city to populate real data."""
+    from database import get_all_issues
+    from agents.discovery_agent import run_discovery, MONITOR_CITIES
+    from seed_data import seed_database
+    if not get_all_issues():
+        print("[Startup] DB empty — running Bengaluru discovery...")
+        try:
+            count = await run_discovery(MONITOR_CITIES[0])
+            if count == 0 and not get_all_issues():
+                print("[Startup] Discovery returned nothing — loading example issues")
+                seed_database()
+        except Exception as e:
+            print(f"[Startup] Discovery failed ({e}) — loading example issues")
+            seed_database()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     start_scheduler()
+    import asyncio
+    asyncio.create_task(_boot_discovery())
     yield
 
 app = FastAPI(

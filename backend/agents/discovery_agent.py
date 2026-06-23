@@ -4,7 +4,6 @@ Runs on schedule every 6 hours.
 Pipeline: fetch signals (Twitter + Reddit + Google News) → Gemini classifies
           → geospatial cluster → deduplicate → store new issues.
 """
-import random
 import asyncio
 from typing import List, Dict
 
@@ -14,6 +13,7 @@ from services.news_rss_service import fetch_news_headlines
 from services.maps_reviews_service import fetch_infrastructure_reviews
 from services.gemini_service import classify_and_extract_issues
 from services.clustering_service import cluster_issues
+from services.geocoding_service import resolve_coordinates
 from database import create_issue, get_all_issues
 
 MONITOR_CITIES = [
@@ -39,9 +39,11 @@ MONITOR_CITIES = [
 
 
 def _assign_coordinates(issue: dict, city: dict) -> dict:
-    issue["latitude"] = city["lat"] + random.uniform(-0.06, 0.06)
-    issue["longitude"] = city["lon"] + random.uniform(-0.06, 0.06)
-    issue["location_name"] = issue.get("location_hint", city["name"]) + f", {city['name']}"
+    hint = issue.get("location_hint", "")
+    lat, lon = resolve_coordinates(hint, city["name"])
+    issue["latitude"] = lat
+    issue["longitude"] = lon
+    issue["location_name"] = (hint if hint else city["name"]) + f", {city['name']}"
     return issue
 
 
