@@ -111,7 +111,7 @@ export default function App() {
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm font-medium text-white mb-1">Discovery agent running</p>
-            <p className="text-xs text-gray-500">Scanning Twitter · Google Maps · Clustering signals</p>
+            <p className="text-xs text-gray-500">Scanning Twitter · Reddit · Google News · Clustering signals</p>
           </div>
         </div>
       ) : error ? (
@@ -166,16 +166,23 @@ export default function App() {
             {/* Issue list */}
             <div className="flex-1 overflow-y-auto">
               {filteredIssues.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-2">
-                  <span className="text-3xl opacity-30">📭</span>
-                  <p className="text-sm">No issues in this category</p>
-                  {filter !== "ALL" && (
-                    <button
-                      onClick={() => setFilter("ALL")}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 mt-1"
-                    >
-                      Show all issues
-                    </button>
+                <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-2 px-6 text-center">
+                  <span className="text-3xl opacity-30">📡</span>
+                  {filter === "ALL" ? (
+                    <>
+                      <p className="text-sm text-gray-400">No issues detected yet</p>
+                      <p className="text-xs text-gray-600">Click <span className="text-gray-400 font-medium">▶ Run Discovery</span> to scan live signals from Twitter, Reddit &amp; Google News</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm">No issues in this category</p>
+                      <button
+                        onClick={() => setFilter("ALL")}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 mt-1"
+                      >
+                        Show all issues
+                      </button>
+                    </>
                   )}
                 </div>
               ) : (

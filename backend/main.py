@@ -6,19 +6,14 @@ from dotenv import load_dotenv
 load_dotenv()  # must be first — loads .env before any service reads os.environ
 
 import os
-from database import init_db, get_all_issues, get_stats
+from database import init_db, get_stats
 from scheduler import start_scheduler
-from seed_data import seed_database
 from routers import issues, confirmations, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     start_scheduler()
-    # First-run: populate DB with pre-defined demo data (no API calls, instant)
-    if not get_all_issues():
-        print("[Startup] Empty DB — loading demo data...")
-        seed_database()
     yield
 
 app = FastAPI(
