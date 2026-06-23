@@ -1,40 +1,8 @@
 const STAT_CONFIG = [
-  {
-    key: "discovered",
-    label: "Discovered",
-    sublabel: "by AI",
-    color: "text-yellow-400",
-    bg: "bg-yellow-400/8",
-    border: "border-yellow-400/20",
-    dot: "bg-yellow-400",
-  },
-  {
-    key: "confirmed",
-    label: "Confirmed",
-    sublabel: "by citizens",
-    color: "text-orange-400",
-    bg: "bg-orange-400/8",
-    border: "border-orange-400/20",
-    dot: "bg-orange-400",
-  },
-  {
-    key: "escalated",
-    label: "Escalated",
-    sublabel: "to govt",
-    color: "text-blue-400",
-    bg: "bg-blue-400/8",
-    border: "border-blue-400/20",
-    dot: "bg-blue-400",
-  },
-  {
-    key: "resolved",
-    label: "Resolved",
-    sublabel: "fixed",
-    color: "text-green-400",
-    bg: "bg-green-400/8",
-    border: "border-green-400/20",
-    dot: "bg-green-400",
-  },
+  { key: "discovered", label: "Discovered", sublabel: "by AI",       color: "text-yellow-400" },
+  { key: "confirmed",  label: "Confirmed",  sublabel: "by citizens",  color: "text-orange-400" },
+  { key: "escalated",  label: "Escalated",  sublabel: "to govt",      color: "text-blue-400"   },
+  { key: "resolved",   label: "Resolved",   sublabel: "fixed",        color: "text-green-400"  },
 ]
 
 export default function ImpactDashboard({ stats }) {
