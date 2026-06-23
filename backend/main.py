@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # must be first — loads .env before any service reads os.environ
 
+import os
 from database import init_db, get_all_issues, get_stats
 from scheduler import start_scheduler
 from seed_data import seed_database
@@ -27,10 +28,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Allow the configured frontend URL + localhost for dev
+_frontend_url = os.environ.get("FRONTEND_URL", "")
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+if _frontend_url:
+    _allowed_origins.append(_frontend_url.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
