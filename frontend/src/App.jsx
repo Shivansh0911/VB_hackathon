@@ -112,33 +112,7 @@ export default function App() {
       </header>
 
       {/* ── Body ─────────────────────────────────────────────────── */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
-          <div className="text-center">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm font-medium text-white mb-1">Discovery agent running</p>
-            <p className="text-xs text-gray-500">Scanning Twitter · Reddit · Google News · Clustering signals</p>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-sm">
-            <div className="text-4xl mb-3">⚠️</div>
-            <p className="text-sm font-medium text-red-400 mb-1">Backend unreachable</p>
-            <p className="text-xs text-gray-500 mb-1">{error}</p>
-            <p className="text-xs text-gray-600 mb-5">
-              Make sure the FastAPI server is running on port 8000 and{" "}
-              <code className="bg-gray-800 px-1 rounded">VITE_API_URL</code> is set correctly.
-            </p>
-            <button
-              onClick={reload}
-              className="text-sm bg-gray-800 hover:bg-gray-700 border border-gray-700 px-5 py-2 rounded-lg transition text-white"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      ) : (
+      {(
         <div className="flex flex-1 min-h-0">
           {/* ── Left panel ─────────────────────────────────────── */}
           <div className="w-96 flex-shrink-0 border-r border-gray-800 flex flex-col min-h-0">
@@ -220,7 +194,6 @@ export default function App() {
             />
           </div>
         </div>
-      )}
     </div>
   )
 }
