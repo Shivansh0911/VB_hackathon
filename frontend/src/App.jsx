@@ -14,7 +14,7 @@ const AGENT_STEPS = [
 ]
 
 export default function App() {
-  const { issues, stats, loading, error, reload } = useIssues()
+  const { issues, stats, loading, error, liveUpdating, reload } = useIssues()
   const [selectedIssue, setSelectedIssue] = useState(null)
   const [filter, setFilter] = useState("ALL")
   const [adminBusy, setAdminBusy] = useState(false)
@@ -75,7 +75,13 @@ export default function App() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {adminMsg && (
+          {liveUpdating && (
+            <span className="text-xs text-emerald-400 mr-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              Fetching live data...
+            </span>
+          )}
+          {adminMsg && !liveUpdating && (
             <span className={`text-xs mr-1 ${adminSuccess ? "text-emerald-400" : "text-gray-400"}`}>
               {adminMsg}
             </span>

@@ -10,28 +10,29 @@ from database import init_db, get_stats
 from scheduler import start_scheduler
 from routers import issues, confirmations, admin
 
-async def _boot_discovery():
-    """If DB is empty on startup, run discovery for one city to populate real data."""
-    from database import get_all_issues
+async def _background_discovery():
+    """Run real discovery in background after seed data is shown. Adds real issues on top."""
+    import asyncio
     from agents.discovery_agent import run_discovery, MONITOR_CITIES
-    from seed_data import seed_database
-    if not get_all_issues():
-        print("[Startup] DB empty — running Bengaluru discovery...")
-        try:
-            count = await run_discovery(MONITOR_CITIES[0])
-            if count == 0 and not get_all_issues():
-                print("[Startup] Discovery returned nothing — loading example issues")
-                seed_database()
-        except Exception as e:
-            print(f"[Startup] Discovery failed ({e}) — loading example issues")
-            seed_database()
+    await asyncio.sleep(3)  # let server fully start first
+    print("[Startup] Running background discovery to supplement seed data...")
+    try:
+        await run_discovery(MONITOR_CITIES[0])  # Bengaluru — 1 Gemini call
+    except Exception as e:
+        print(f"[Startup] Background discovery failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+    from database import get_all_issues
     init_db()
     start_scheduler()
-    import asyncio
-    asyncio.create_task(_boot_discovery())
+    # Always show seed data instantly (milliseconds, no API)
+    if not get_all_issues():
+        from seed_data import seed_database
+        seed_database()
+        # Then run real discovery in background — frontend auto-refreshes to pick it up
+        asyncio.create_task(_background_discovery())
     yield
 
 app = FastAPI(

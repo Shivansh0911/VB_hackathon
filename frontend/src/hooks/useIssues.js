@@ -6,6 +6,7 @@ export function useIssues() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [liveUpdating, setLiveUpdating] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -20,7 +21,19 @@ export function useIssues() {
     }
   }, [])
 
+  // Initial load
   useEffect(() => { load() }, [load])
 
-  return { issues, stats, loading, error, reload: load }
+  // Silent background refresh at 35s — picks up real discovery data
+  // that background_discovery() adds after seed data is shown
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setLiveUpdating(true)
+      await load()
+      setLiveUpdating(false)
+    }, 35000)
+    return () => clearTimeout(timer)
+  }, [load])
+
+  return { issues, stats, loading, error, liveUpdating, reload: load }
 }
