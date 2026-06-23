@@ -46,8 +46,7 @@ API docs at http://localhost:8000/docs
 ```bash
 cd frontend
 cp .env.example .env
-# Fill in VITE_MAPS_API_KEY (required for map)
-# Set VITE_API_URL=http://localhost:8000 for local dev
+# Set VITE_API_URL=http://localhost:8000 for local dev (no other keys needed)
 
 npm install
 npm run dev
@@ -67,8 +66,7 @@ Frontend runs at http://localhost:5173
 ### Frontend (`frontend/.env`)
 | Variable | Required | Description |
 |---|---|---|
-| `VITE_MAPS_API_KEY` | Yes | Google Maps JavaScript API key |
-| `VITE_API_URL` | Yes | Backend URL |
+| `VITE_API_URL` | Yes | Backend URL (default: http://localhost:8000) |
 
 ## Demo Flow (for judges)
 
@@ -89,7 +87,7 @@ To demo faster: use the **"Run Discovery"** button to trigger Agent 1 manually, 
 | AI (vision) | Gemini 1.5 Flash multimodal |
 | AI (drafting) | Gemini 1.5 Pro |
 | Frontend | React + Vite + Tailwind CSS |
-| Maps | Google Maps JavaScript API |
+| Maps | Leaflet.js + CartoDB Dark Matter (free, no key) |
 | Database | SQLite (hackathon) |
 | Deployment | Google AI Studio + Vercel |
 

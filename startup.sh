@@ -21,7 +21,7 @@ else
 fi
 
 if [ ! -f "frontend/.env" ]; then
-  echo "[4/4] Creating frontend/.env from example (fill in VITE_MAPS_API_KEY)..."
+  echo "[4/4] Creating frontend/.env from example..."
   cp frontend/.env.example frontend/.env
 else
   echo "[4/4] frontend/.env already exists"
