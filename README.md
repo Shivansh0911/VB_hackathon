@@ -146,8 +146,16 @@ Twitter's recent search API requires $100/month (Basic plan) as of 2023. CivicPu
 ### Email Dispatch — Intentionally Not Sent
 SMTP email is fully coded. Not configured because sending AI-generated letters to real government officials based on hackathon demo data is inappropriate. In production: add Gmail SMTP credentials → letters reach real inboxes. The letter, authority, and escalation flow are all visible in the UI.
 
+### Google Maps — Paid API
+Google Maps Platform requires billing enabled and costs ~$7 per 1000 map loads. CivicPulse uses **CartoDB Dark Matter tiles** via Leaflet.js — free, no API key, no billing. The map is fully functional with pin clustering, fly-to, and popups. Google Maps would add nothing functionally and would make the project impossible to demo for free.
+
 ### DB Resets on Render Restart
-Render free tier has no persistent disk. Mitigated by: instant seed data on startup + UptimeRobot keeping server warm. Data re-populates within seconds of any restart.
+Render free tier has no persistent disk. If Render restarts the server (e.g. after inactivity), the SQLite database resets. **Mitigated by:**
+- Seed data loads instantly on every startup (8 issues visible in <1s, no API calls)
+- UptimeRobot pings the backend every 5 minutes, preventing Render from sleeping
+- Background discovery fires 3s after startup to add real issues on top of seed data
+
+If the backend appears down during judging: wait 30 seconds (cold start) or visit https://vb-hackathon.onrender.com/docs directly to wake it up. The frontend always shows fallback data regardless.
 
 ---
 
