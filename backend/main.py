@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
-from database import init_db, get_all_issues
+load_dotenv()  # must be first — loads .env before any service reads os.environ
+
+from database import init_db, get_all_issues, get_stats
 from agents.discovery_agent import run_all_cities
 from scheduler import start_scheduler
 from routers import issues, confirmations, admin
@@ -38,9 +41,6 @@ app.include_router(issues.router)
 app.include_router(confirmations.router)
 app.include_router(admin.router)
 
-# Stats shortcut at /api/stats (convenience alias)
-from database import get_stats
-from fastapi import APIRouter
 stats_router = APIRouter()
 
 @stats_router.get("/api/stats")

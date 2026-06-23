@@ -2,10 +2,24 @@ import google.generativeai as genai
 import os
 import json
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+_configured = False
 
-flash_model = genai.GenerativeModel("gemini-1.5-flash")
-pro_model = genai.GenerativeModel("gemini-1.5-pro")
+def _ensure_configured():
+    global _configured
+    if not _configured:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set. Add it to your .env file.")
+        genai.configure(api_key=api_key)
+        _configured = True
+
+def _flash():
+    _ensure_configured()
+    return genai.GenerativeModel("gemini-1.5-flash")
+
+def _pro():
+    _ensure_configured()
+    return genai.GenerativeModel("gemini-1.5-pro")
 
 ISSUE_CATEGORIES = [
     "POTHOLE", "STREETLIGHT", "WATER_LEAKAGE", "GARBAGE",
@@ -44,7 +58,7 @@ Example:
 [{{"source_index": 1, "category": "POTHOLE", "title": "Large pothole on MG Road", "description": "Deep pothole near metro station.", "severity": "HIGH", "location_hint": "MG Road near metro"}}]
 """
     try:
-        response = flash_model.generate_content(prompt)
+        response = _flash().generate_content(prompt)
         return _parse_json(response.text)
     except Exception as e:
         print(f"[Gemini] classify error: {e}")
@@ -65,7 +79,7 @@ Return ONLY valid JSON:
 """
     try:
         image_part = {"mime_type": "image/jpeg", "data": photo_base64}
-        response = flash_model.generate_content([prompt, image_part])
+        response = _flash().generate_content([prompt, image_part])
         return _parse_json(response.text)
     except Exception as e:
         print(f"[Gemini] vision error: {e}")
@@ -93,7 +107,7 @@ Return ONLY valid JSON:
 }}
 """
     try:
-        response = flash_model.generate_content(prompt)
+        response = _flash().generate_content(prompt)
         return _parse_json(response.text)
     except Exception as e:
         print(f"[Gemini] authority error: {e}")
@@ -128,7 +142,7 @@ Requirements:
 Return the letter text only, no JSON.
 """
     try:
-        response = pro_model.generate_content(prompt)
+        response = _pro().generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         print(f"[Gemini] letter error: {e}")
