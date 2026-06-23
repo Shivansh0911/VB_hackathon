@@ -1,230 +1,272 @@
-# CivicPulse
+# CivicPulse — Autonomous Civic Intelligence Platform
 
-**3-agent autonomous civic intelligence platform for Indian cities.**
+> **AI discovers civic problems before citizens report them.**
+> Citizens confirm. Agents escalate to the right authority automatically.
 
-AI discovers civic problems from public signals → citizens confirm with photos → agents escalate to the right authority with a formal letter.
+**Live Demo:** https://civicradar.netlify.app
+**Backend API:** https://vb-hackathon.onrender.com
+**API Docs:** https://vb-hackathon.onrender.com/docs
 
-Built for Vibe2Ship Hackathon — Problem 2: Community Hero (Hyperlocal Problem Solver).
+Built for **Vibe2Ship Hackathon — Problem 2: Community Hero (Hyperlocal Problem Solver)**
 
 ---
 
-## How It Works
+## The Idea
+
+Every civic app today is a complaint box. Citizen opens app → fills form → submits. Nobody does it.
+
+CivicPulse flips the model: **the AI already knows before you report.**
+
+An autonomous Discovery Agent scans Twitter, Reddit, and Google News RSS continuously. It finds civic issues, clusters them geospatially, and puts them on the map. Citizens just confirm what the AI found. Once 5 citizens confirm, the Resolution Agent identifies the correct government authority and sends a formal escalation letter — fully automated, end to end.
+
+---
+
+## 3-Agent Pipeline
 
 ```
-Signal Sources           Agent 1 — Discovery         Agent 2 — Confirmation      Agent 3 — Resolution
-──────────────           ────────────────────         ──────────────────────      ────────────────────
-Google News RSS  ──►                              ──►                        ──►
-Twitter / X      ──►  Gemini classifies issues        Citizens upload photos       Identifies authority
-Reddit (opt.)    ──►  Geospatial clustering            Gemini Vision validates      Drafts formal letter
-                      Runs every 6 hours               Confidence score rises       Sends via email
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 1 — DISCOVERY          Runs every 6 hours via scheduler  │
+│                                                                  │
+│  Twitter + Reddit + Google News RSS                              │
+│       ↓                                                          │
+│  Gemini 2.5 Flash classifies civic signals                       │
+│       ↓                                                          │
+│  Haversine geospatial clustering (0.3km radius)                  │
+│       ↓                                                          │
+│  Neighbourhood geocoding (60+ named areas)                       │
+│       ↓                                                          │
+│  New issues stored → appear on map as DISCOVERED                 │
+└─────────────────────────────────────────────────────────────────┘
+          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 2 — CONFIRMATION       Triggered per citizen action       │
+│                                                                  │
+│  Citizen clicks issue → uploads photo (optional)                 │
+│       ↓                                                          │
+│  Gemini Vision validates photo matches issue category            │
+│       ↓                                                          │
+│  Confidence score rises (+15 per confirmation)                   │
+│       ↓                                                          │
+│  At 5 confirmations → status moves to CONFIRMED                  │
+└─────────────────────────────────────────────────────────────────┘
+          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 3 — RESOLUTION         Triggered on CONFIRMED status      │
+│                                                                  │
+│  Authority lookup table → BBMP / BMC / GHMC / BESCOM / BWSSB    │
+│       ↓                                                          │
+│  Gemini Pro drafts formal escalation letter                      │
+│       ↓                                                          │
+│  Letter + authority stored, shown in UI, logged for dispatch     │
+│       ↓                                                          │
+│  Issue moves to ESCALATED                                        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Issues move through four stages: **DISCOVERED → CONFIRMED → ESCALATED → RESOLVED**
+**Issue stages:** `DISCOVERED → CONFIRMED → ESCALATED → RESOLVED`
 
 ---
 
-## Data Sources
+## What Is Actually Running (Not Demo)
 
-| Source | Status | Notes |
-|--------|--------|-------|
-| **Google News RSS** | Free, no auth, always on | Primary real data source. Queries live Indian civic news (BBMP, BMC, GHMC potholes, drainage, streetlights). No API key needed. |
-| **Twitter / X** | Free dev token needed | Fetches real recent tweets when token is valid. Our test account hit monthly credit limits — realistic city-specific mock tweets are used as fallback. App works either way. |
-| **Reddit** | Free credentials (optional) | Searches r/bangalore, r/mumbai, r/hyderabad for civic complaints. Skipped silently if not configured — it is extra signal, not required for the app to work. |
-| **Google Maps Reviews** | **Not used — paid** | Places API charges beyond $200/month free credit. Disabled to keep this project 100% free-tier safe. The map display uses Leaflet.js with free CartoDB tiles — no Google Maps API. |
-| **Gemini 2.5 Flash** | Free tier (5 RPM, 20 RPD) | All AI tasks: issue classification, photo validation, letter drafting. If the daily quota runs out, example issues load automatically as fallback. |
-
----
-
-## What Is SMTP? Is It Required?
-
-**SMTP** (Simple Mail Transfer Protocol) is how the app emails the escalation letter to civic authorities (e.g. `commissioner@bbmp.gov.in`).
-
-**Not required.** Without SMTP:
-- The letter is still fully generated by Gemini and shown in the UI
-- It is logged to the server console
-- It is just not emailed anywhere
-
-Skip SMTP for the hackathon demo. Configure it later for real email delivery.
-
----
-
-## Why Is Reddit Listed If It Is Not Critical?
-
-Reddit adds more local signal — posts from r/bangalore, r/mumbai, r/hyderabad contain raw citizen complaints that supplement Google News RSS. The API is completely free (script OAuth2 app, no billing). But if credentials are not set, the app works fine on Google News RSS alone.
-
----
-
-## What Happens on First Run
-
-1. App starts → database is empty → map shows "No issues detected yet"
-2. Click **▶ Run Discovery** → agent fetches live Google News RSS headlines for all 3 cities
-3. Gemini classifies real headlines into structured civic issues
-4. Issues appear on the map with location, category, and confidence score
-5. **If Gemini daily quota is exhausted** → example issues load automatically so the map is never empty
-
----
-
-## Environment Variables
-
-### Required — nothing works without this
-
-| Variable | Where to get it |
-|----------|----------------|
-| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com) → Get API Key → Free |
-
-### Required on Render only
-
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | `/var/data/civicpulse.db` — keeps data across restarts on Render |
-| `FRONTEND_URL` | Your Netlify URL — needed so the backend allows CORS from your frontend |
-
-### Optional — app works without these
-
-| Variable | What it does | Without it |
-|----------|-------------|------------|
-| `TWITTER_BEARER_TOKEN` | Real recent tweets | City-specific mock tweets used |
-| `REDDIT_CLIENT_ID` | Reddit civic posts | Reddit source skipped |
-| `REDDIT_CLIENT_SECRET` | Required alongside `REDDIT_CLIENT_ID` | — |
-| `SMTP_HOST` | Email server (`smtp.gmail.com`) | Letter generated and shown, not emailed |
-| `SMTP_PORT` | `587` | — |
-| `SMTP_USER` | Your Gmail address | — |
-| `SMTP_PASS` | Gmail app password (not your login password) | — |
-
----
-
-## Deploy
-
-### Step 1 — Backend on Render
-
-1. [render.com](https://render.com) → **New → Web Service**
-2. Connect repo: `Shivansh0911/VB_hackathon`
-3. Set:
-   - **Root Directory**: `civicpulse`
-   - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - **Instance Type**: Free
-4. **Add a Disk** → Mount path: `/var/data` → Size: 1 GB
-5. **Environment Variables** — add only these three to start:
-
-   | Key | Value |
-   |-----|-------|
-   | `GEMINI_API_KEY` | your key |
-   | `DATABASE_URL` | `/var/data/civicpulse.db` |
-   | `FRONTEND_URL` | fill in after Step 2 |
-
-6. **Deploy** → wait ~2 min → copy the service URL (`https://your-service.onrender.com`)
-
----
-
-### Step 2 — Frontend on Netlify
-
-1. [netlify.com](https://netlify.com) → **Add new site → Import from Git**
-2. Connect repo: `Shivansh0911/VB_hackathon`
-3. Set:
-   - **Base directory**: `civicpulse/frontend`
-   - **Build command**: `npm run build`
-   - **Publish directory**: `civicpulse/frontend/dist`
-4. **Environment Variables**:
-
-   | Key | Value |
-   |-----|-------|
-   | `VITE_API_URL` | `https://your-service.onrender.com` |
-
-5. **Deploy** → copy the Netlify URL (`https://your-app.netlify.app`)
-
----
-
-### Step 3 — Wire CORS back on Render
-
-Render → your service → **Environment** → set:
-
-```
-FRONTEND_URL = https://your-app.netlify.app
-```
-
-Then **Manual Deploy → Deploy latest commit**.
-
----
-
-### Step 4 — Verify
-
-Open your Netlify URL:
-- Map shows empty state → click **▶ Run Discovery**
-- Real civic issues appear (from Google News RSS + Gemini)
-- Click any issue → **Confirm** with or without a photo
-- After 5 confirmations → click **▶ Run Escalation** → formal letter generated
-
----
-
-## Local Dev
-
-```bash
-# Backend
-cd civicpulse
-cp .env.example .env          # add your GEMINI_API_KEY
-pip install -r backend/requirements.txt
-cd backend && uvicorn main:app --reload
-# → http://localhost:8000  |  docs at /docs
-
-# Frontend (new terminal)
-cd civicpulse/frontend
-cp .env.example .env          # VITE_API_URL=http://localhost:8000
-npm install && npm run dev
-# → http://localhost:5173
-```
-
----
-
-## Tech Stack
-
-| Layer | Tech |
-|-------|------|
-| Backend | FastAPI, Python 3.11, APScheduler, SQLite |
-| AI | Gemini 2.5 Flash (Google AI Studio — free tier) |
-| Frontend | React 18, Vite 5, Tailwind CSS 3, Leaflet.js |
-| Map tiles | CartoDB Dark Matter (free, no API key) |
-| Geospatial | Custom Haversine clustering (pure Python, no paid library) |
-| Hosting | Render (backend) + Netlify (frontend) |
-
-## Cities Monitored
-
-Bengaluru (BBMP / BESCOM / BWSSB) · Mumbai (BMC) · Hyderabad (GHMC / HMWSSB / TSSPDCL)
+| Component | Status | Details |
+|-----------|--------|---------|
+| Google News RSS | **Live** | Queries real Indian civic headlines — BBMP potholes, GHMC drainage, BMC waterlogging. No API key. |
+| Gemini 2.5 Flash — Classification | **Live** | Batch classifies all signals into structured civic issues with category, severity, location hint |
+| Gemini 2.5 Flash — Photo Validation | **Live** | Multimodal: validates citizen photos match the reported issue |
+| Gemini 2.5 Flash — Letter Drafting | **Live** | Generates formal 250-word escalation letter addressed to specific authority |
+| Haversine Clustering | **Live** | Pure Python geospatial clustering — merges nearby same-category signals |
+| Neighbourhood Geocoding | **Live** | 60+ named areas (Indiranagar, Koramangala, Bandra, Gachibowli etc.) mapped to real coordinates |
+| Authority Lookup Table | **Live** | BBMP Roads, BBMP SWM, BESCOM, BWSSB, BMC, GHMC, TSSPDCL, HMWSSB — department-level emails |
+| APScheduler | **Live** | Discovery runs every 6h, escalation batch every 30min — no manual trigger needed |
+| Auto boot discovery | **Live** | On startup if DB empty, Bengaluru scan fires automatically |
+| Fallback seed data | **Live** | Only if Gemini quota exhausted — example issues load as last resort |
+| CORS protection | **Live** | Restricted to Netlify frontend URL only |
+| SQL injection safe | **Live** | All queries use parameterised `?` placeholders |
+| Photo size limit | **Live** | 5MB max, base64 encoded |
 
 ---
 
 ## Known Limitations & Why
 
-### Twitter / X — Search API Is No Longer Free
-Twitter's recent search API (`/2/tweets/search/recent`) requires a paid plan (Basic = $100/month) as of 2023. The free developer tier only allows posting tweets, not searching them. CivicPulse includes a valid Bearer Token and the full API integration — it returns 402 CreditsDepleted at runtime because the account has no paid credits.
+### Twitter / X — Search API Is Paid
+Twitter's recent search API requires a paid plan ($100/month Basic) as of 2023. The free developer tier only allows posting, not searching. CivicPulse has the full Twitter integration with Bearer Token — it hits 402 CreditsDepleted because the account has no paid credits.
 
-**What runs instead:** City-specific mock tweets that mirror real complaint patterns (tagged with BBMP, BMC, GHMC, real location names). The Discovery Agent, Gemini classification, and clustering pipeline run on these + real Google News RSS data.
+**What runs instead:** City-specific mock tweets mirroring real complaint patterns (BBMP/BMC/GHMC tags, real Bengaluru/Mumbai/Hyderabad locations). The full Discovery pipeline — Gemini classification, clustering, geocoding — runs on these plus real Google News RSS.
 
 ### Email Dispatch — Intentionally Not Sent
-The SMTP email service is fully coded and would work with Gmail credentials. It is intentionally not configured for this deployment for two reasons:
-1. Sending AI-generated letters to real government officials (`commissioner@bbmp.gov.in` etc.) based on hackathon demo data would be inappropriate
-2. The letter content, authority identification, and escalation flow are fully visible in the UI — the delivery mechanism is infrastructure, not the innovation
-
-In a production deployment, SMTP credentials would be added and real letters would reach real authorities.
+SMTP email service is fully coded (`email_service.py`). Not configured for this deployment intentionally:
+- Sending AI-generated letters to real government officials based on hackathon demo data would be inappropriate
+- The letter, authority identification, department routing, and escalation flow are all visible in the UI
+- In production: add Gmail SMTP credentials → letters reach real inboxes
 
 ### Reddit — Optional Signal Source
-Reddit integration (`reddit_service.py`) is fully built and would activate with free OAuth2 credentials. It is not configured because Google News RSS already provides sufficient real signal for the hackathon demo. Reddit would add volume, not capability.
+Full OAuth2 integration built in `reddit_service.py`. Not configured because Google News RSS provides sufficient signal for the demo. Adding `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` (free) activates r/bangalore, r/mumbai, r/hyderabad.
 
 ### Google Maps Reviews — Paid API
-Places API charges beyond $200/month free credit. Disabled to keep the project 100% free-tier safe. The map display uses Leaflet.js with CartoDB tiles — no Google Maps billing.
+Places API charges beyond the $200/month free credit. Disabled to keep the project 100% free-tier safe. Map tiles use Leaflet.js + CartoDB Dark Matter — no Google Maps API required.
+
+### DB Resets on Render Restart
+Render free tier has no persistent disk. SQLite resets on cold start. Mitigated by auto-boot discovery on startup — real data re-populates within ~20 seconds. UptimeRobot keeps the server warm so cold starts are rare.
+
+---
+
+## Tech Stack
+
+### Backend
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Web framework | FastAPI | 0.111.0 |
+| ASGI server | Uvicorn | 0.30.0 |
+| AI / LLM | Google Gemini 2.5 Flash | via google-generativeai 0.7.2 |
+| Task scheduler | APScheduler (AsyncIOScheduler) | 3.10.4 |
+| Database | SQLite | built-in (Python 3.11) |
+| HTTP client | httpx (async) | 0.27.0 |
+| Data validation | Pydantic v2 | ≥2.7.4 |
+| Auth loading | python-dotenv | 1.0.1 |
+| File upload | python-multipart | 0.0.9 |
+| Python version | Python | 3.11.9 |
+
+### Frontend
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Framework | React | 18 |
+| Build tool | Vite | 5 |
+| Styling | Tailwind CSS | 3 |
+| Map | Leaflet.js | 1.9.4 |
+| Map tiles | CartoDB Dark Matter | Free, no key |
+| HTTP | Fetch API (native) | — |
+| State | React hooks (useState, useEffect, useCallback) | — |
+
+### Infrastructure
+| Component | Service | Cost |
+|-----------|---------|------|
+| Backend hosting | Render (Free tier) | $0 |
+| Frontend hosting | Netlify (Free tier) | $0 |
+| AI (Gemini) | Google AI Studio (Free tier, 5 RPM / 20 RPD) | $0 |
+| Uptime monitoring | UptimeRobot (Free tier, 5-min interval) | $0 |
+| Source control | GitHub | $0 |
+| **Total** | | **$0/month** |
+
+### AI Usage Summary
+| Task | Model | When |
+|------|-------|------|
+| Classify signals into civic issues | Gemini 2.5 Flash | Discovery Agent (every 6h) |
+| Validate citizen photos | Gemini 2.5 Flash (multimodal) | Confirmation Agent (per upload) |
+| Identify government authority | Lookup table → Gemini fallback | Resolution Agent |
+| Draft escalation letter | Gemini 2.5 Flash | Resolution Agent |
+
+---
+
+## Project Structure
+
+```
+civicpulse/
+├── backend/
+│   ├── main.py                    # FastAPI app, CORS, lifespan, auto-boot discovery
+│   ├── database.py                # SQLite — issues, confirmations, escalations tables
+│   ├── scheduler.py               # APScheduler — discovery 6h, escalation 30min
+│   ├── seed_data.py               # Fallback example data (only if Gemini quota exhausted)
+│   ├── agents/
+│   │   ├── discovery_agent.py     # Agent 1 — multi-source fetch + Gemini classify + cluster
+│   │   ├── confirmation_agent.py  # Agent 2 — Gemini Vision photo validation
+│   │   └── resolution_agent.py    # Agent 3 — authority lookup + letter draft + email
+│   ├── services/
+│   │   ├── gemini_service.py      # Gemini 2.5 Flash — classify, vision, letter, retry logic
+│   │   ├── twitter_service.py     # Twitter v2 API + city mock fallback
+│   │   ├── reddit_service.py      # Reddit OAuth2 (optional)
+│   │   ├── news_rss_service.py    # Google News RSS — live, no auth
+│   │   ├── maps_reviews_service.py# Google Maps Reviews (disabled — paid)
+│   │   ├── geocoding_service.py   # Neighbourhood coordinate lookup (60+ areas)
+│   │   ├── clustering_service.py  # Haversine geospatial clustering
+│   │   ├── authority_service.py   # BBMP/BMC/GHMC/BESCOM/BWSSB lookup table
+│   │   └── email_service.py       # SMTP dispatch (gracefully skips if unconfigured)
+│   └── routers/
+│       ├── issues.py              # GET /api/issues, GET /api/issues/:id
+│       ├── confirmations.py       # POST /api/confirm/:id (photo upload)
+│       └── admin.py               # POST /api/admin/trigger-discovery, trigger-escalation
+└── frontend/
+    └── src/
+        ├── App.jsx                # Main layout, filter tabs, admin controls
+        ├── components/
+        │   ├── MapView.jsx        # Leaflet map, circle markers, popups, fly-to
+        │   ├── IssueCard.jsx      # Issue list item, confidence bar, expand detail
+        │   ├── ConfirmModal.jsx   # Photo upload + Gemini validation result
+        │   ├── ImpactDashboard.jsx# Stats bar, pipeline visual
+        │   ├── EscalationLog.jsx  # Shows generated letter and authority
+        │   └── StatusBadge.jsx    # Colour-coded status pill
+        ├── hooks/
+        │   └── useIssues.js       # Parallel fetch issues + stats, reload helper
+        └── utils/
+            └── api.js             # All API calls, VITE_API_URL base
+```
+
+---
+
+## Cities & Authorities
+
+| City | Issues Monitored | Authorities |
+|------|-----------------|-------------|
+| **Bengaluru** | Potholes, Streetlights, Water Leaks, Garbage, Drainage, Footpaths, Road Damage | BBMP (Roads, SWM, SWD, Horticulture), BESCOM, BWSSB |
+| **Mumbai** | Potholes, Waterlogging, Garbage, Streetlights, Road Damage | BMC (Roads, Hydraulic, SWM, SWD), MSEDCL |
+| **Hyderabad** | Potholes, Streetlights, Water Leaks, Garbage, Road Damage | GHMC (Engineering, Sanitation), TSSPDCL, HMWSSB |
+
+---
+
+## Environment Variables
+
+### Required
+| Variable | Description |
+|----------|-------------|
+| `GEMINI_API_KEY` | Google AI Studio — free at aistudio.google.com |
+
+### Required on Render
+| Variable | Value |
+|----------|-------|
+| `FRONTEND_URL` | `https://civicradar.netlify.app` |
+
+### Optional
+| Variable | Effect if missing |
+|----------|------------------|
+| `TWITTER_BEARER_TOKEN` | City mock tweets used |
+| `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` | Reddit source skipped |
+| `SMTP_USER` + `SMTP_PASS` | Letter shown in UI, not emailed |
+
+---
+
+## Local Development
+
+```bash
+# Backend
+cd civicpulse
+cp .env.example .env        # add GEMINI_API_KEY
+pip install -r requirements.txt
+cd backend
+uvicorn main:app --reload
+# → http://localhost:8000
+# → http://localhost:8000/docs  (interactive API)
+
+# Frontend
+cd civicpulse/frontend
+cp .env.example .env        # VITE_API_URL=http://localhost:8000
+npm install
+npm run dev
+# → http://localhost:5173
+```
 
 ---
 
 ## Future Improvements
 
-| Feature | What it would add |
-|---------|------------------|
-| **Twitter real data** | Upgrade to Basic plan ($100/month) to unlock real tweet search. Architecture already built — just a billing decision. |
-| **Live email dispatch** | Add Gmail SMTP credentials for production deployment to actually deliver escalation letters to authorities. |
-| **Reddit integration** | Add free OAuth2 credentials to activate r/bangalore, r/mumbai, r/hyderabad signal collection. |
-| **Google Maps Reviews** | Enable with paid Places API key for infrastructure-level review signal. |
-| **WhatsApp / Telegram bots** | Citizens report issues via chat — lower friction than photo upload on a web app. |
-| **Resolution tracking** | Follow up with authority post-escalation; close issues when authority confirms action taken. |
-| **More cities** | Delhi (MCD), Chennai (GCC), Pune (PMC) — authority table and subreddit mapping already extensible. |
-| **Push notifications** | Notify citizens when their confirmed issue gets escalated or resolved. |
-| **PostgreSQL** | Replace SQLite with managed Postgres (Supabase free tier) for concurrent writes at scale. |
+| Feature | What it adds |
+|---------|-------------|
+| Twitter paid plan | Real tweet search ($100/month) — architecture ready |
+| Live SMTP email | Letters actually reach government inboxes — code built, needs credentials |
+| Telegram bot | Citizens report via chat, get notified on escalation — completely free |
+| Reddit credentials | r/bangalore, r/mumbai, r/hyderabad signal — free OAuth2 |
+| Google Maps Reviews | Infrastructure-level signal — needs paid key |
+| Resolution tracking | Follow up with authorities, close issues when fixed |
+| More cities | Delhi (MCD), Chennai (GCC), Pune (PMC) — lookup table extensible |
+| PostgreSQL | Replace SQLite for concurrent writes at scale (Supabase free tier) |
+| Push notifications | Notify citizens when their confirmed issue escalates |
+| WhatsApp | Meta charges per conversation — not free |
