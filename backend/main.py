@@ -6,20 +6,18 @@ from dotenv import load_dotenv
 load_dotenv()  # must be first — loads .env before any service reads os.environ
 
 from database import init_db, get_all_issues, get_stats
-from agents.discovery_agent import run_all_cities
 from scheduler import start_scheduler
+from seed_data import seed_database
 from routers import issues, confirmations, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # DB init
     init_db()
-    # Background scheduler (discovery every 6h, escalation every 30min)
     start_scheduler()
-    # Auto-seed demo data on first run
+    # First-run: populate DB with pre-defined demo data (no API calls, instant)
     if not get_all_issues():
-        print("[Startup] Empty DB — seeding demo data via discovery agent...")
-        await run_all_cities()
+        print("[Startup] Empty DB — loading demo data...")
+        seed_database()
     yield
 
 app = FastAPI(

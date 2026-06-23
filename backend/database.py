@@ -55,6 +55,31 @@ def init_db():
     conn.commit()
     conn.close()
 
+def seed_issue(data: dict) -> int:
+    """Insert a pre-defined demo issue with any status (first-run seeding only)."""
+    conn = get_db()
+    cursor = conn.execute("""
+        INSERT INTO issues (title, category, description, latitude, longitude,
+            location_name, source_signals, confidence_score, confirmation_count,
+            status, authority_name, authority_email, escalation_letter, escalation_sent_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        data["title"], data["category"], data["description"],
+        data["latitude"], data["longitude"], data.get("location_name", ""),
+        json.dumps(data.get("source_signals", [])),
+        data.get("confidence_score", 10),
+        data.get("confirmation_count", 0),
+        data.get("status", "DISCOVERED"),
+        data.get("authority_name"),
+        data.get("authority_email"),
+        data.get("escalation_letter"),
+        data.get("escalation_sent_at"),
+    ))
+    conn.commit()
+    issue_id = cursor.lastrowid
+    conn.close()
+    return issue_id
+
 def create_issue(data: dict) -> int:
     conn = get_db()
     cursor = conn.execute("""

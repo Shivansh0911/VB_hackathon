@@ -4,6 +4,7 @@ Runs on schedule every 6 hours.
 Pipeline: fetch signals → Gemini classifies → geospatial cluster → store new issues.
 """
 import random
+import asyncio
 from typing import List, Dict
 
 from services.twitter_service import fetch_tweets
@@ -82,6 +83,8 @@ async def run_discovery(city: dict) -> int:
 
 async def run_all_cities() -> dict:
     results = {}
-    for city in MONITOR_CITIES:
+    for i, city in enumerate(MONITOR_CITIES):
+        if i > 0:
+            await asyncio.sleep(15)  # stay within 5 RPM free tier
         results[city["name"]] = await run_discovery(city)
     return results
