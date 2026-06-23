@@ -15,11 +15,12 @@ def _ensure_configured():
 
 def _flash():
     _ensure_configured()
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.GenerativeModel("models/gemini-2.5-flash")
 
 def _pro():
     _ensure_configured()
-    return genai.GenerativeModel("gemini-1.5-pro")
+    # gemini-2.5-pro requires billing; falls back to flash on quota exhaustion
+    return genai.GenerativeModel("models/gemini-2.5-pro")
 
 ISSUE_CATEGORIES = [
     "POTHOLE", "STREETLIGHT", "WATER_LEAKAGE", "GARBAGE",
@@ -142,7 +143,11 @@ Requirements:
 Return the letter text only, no JSON.
 """
     try:
-        response = _pro().generate_content(prompt)
+        try:
+            response = _pro().generate_content(prompt)
+        except Exception:
+            # Pro quota exhausted on free tier — fall back to Flash
+            response = _flash().generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         print(f"[Gemini] letter error: {e}")
