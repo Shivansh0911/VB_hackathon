@@ -32,5 +32,5 @@ async def process_confirmation(issue_id: int, photo_base64: str, citizen_note: s
         "new_confirmation_count": updated["confirmation_count"],
         "new_confidence_score": updated["confidence_score"],
         "new_status": updated["status"],
-        "ready_for_escalation": updated["status"] == "CONFIRMED",
+        "ready_for_escalation": updated["status"] == "CONFIRMED" and not updated.get("escalation_sent_at"),
     }

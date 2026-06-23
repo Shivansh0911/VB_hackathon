@@ -8,7 +8,7 @@ import { triggerDiscovery, triggerEscalation } from "./utils/api"
 const FILTERS = ["ALL", "DISCOVERED", "CONFIRMED", "ESCALATED", "RESOLVED"]
 
 const AGENT_STEPS = [
-  { icon: "📡", label: "Discovery", desc: "Scans Twitter & Maps" },
+  { icon: "📡", label: "Discovery", desc: "Twitter · Reddit · News RSS" },
   { icon: "✅", label: "Confirmation", desc: "Citizens validate" },
   { icon: "📨", label: "Resolution", desc: "Notifies authority" },
 ]

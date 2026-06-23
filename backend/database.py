@@ -1,8 +1,10 @@
 import sqlite3
 import json
+import os
 from typing import List, Optional
 
-DB_PATH = "civicpulse.db"
+# Supports persistent disk on Render: set DATABASE_URL=/var/data/civicpulse.db
+DB_PATH = os.environ.get("DATABASE_URL", "civicpulse.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
