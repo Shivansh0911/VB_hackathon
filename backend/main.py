@@ -27,13 +27,35 @@ async def lifespan(app: FastAPI):
     from database import get_all_issues
     init_db()
     start_scheduler()
+
     # Always show seed data instantly (milliseconds, no API)
     if not get_all_issues():
         from seed_data import seed_database
         seed_database()
-        # Then run real discovery in background — frontend auto-refreshes to pick it up
         asyncio.create_task(_background_discovery())
+
+    # Start Telegram bot if token is set
+    _bot_app = None
+    _telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    if _telegram_token:
+        try:
+            from services.telegram_bot import build_application
+            _bot_app = build_application(_telegram_token)
+            await _bot_app.initialize()
+            await _bot_app.start()
+            await _bot_app.updater.start_polling(drop_pending_updates=True)
+            print("[Telegram] Bot started and polling")
+        except Exception as e:
+            print(f"[Telegram] Failed to start bot: {e}")
+    else:
+        print("[Telegram] No token set — bot disabled")
+
     yield
+
+    if _bot_app:
+        await _bot_app.updater.stop()
+        await _bot_app.stop()
+        await _bot_app.shutdown()
 
 app = FastAPI(
     title="CivicPulse API",
