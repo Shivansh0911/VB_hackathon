@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+civicpulse.db
+*.db
+
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+.DS_Store

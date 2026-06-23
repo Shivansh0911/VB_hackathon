@@ -1,0 +1,53 @@
+"""
+Agent 3 — Resolution Agent
+Triggered when an issue reaches CONFIRMED status (5+ citizen confirmations).
+Pipeline: identify authority → draft formal letter → send email → update DB.
+"""
+from services.gemini_service import identify_authority, draft_escalation_letter
+from services.email_service import send_escalation_email
+from database import get_issue, update_issue_escalated, get_issues_ready_for_escalation
+
+async def escalate_issue(issue_id: int) -> dict:
+    issue = get_issue(issue_id)
+    if not issue:
+        return {"success": False, "error": "Issue not found"}
+    if issue["status"] != "CONFIRMED":
+        return {"success": False, "error": f"Status is '{issue['status']}', expected CONFIRMED"}
+
+    print(f"[Resolution] Escalating #{issue_id}: {issue['title']}")
+
+    # Step 1: identify responsible government authority via Gemini
+    authority = identify_authority(issue)
+    print(f"[Resolution] Authority → {authority['authority_name']} <{authority['email']}>")
+
+    # Step 2: draft formal letter with Gemini Pro
+    letter = draft_escalation_letter(issue, authority, issue["confirmation_count"])
+
+    # Step 3: dispatch email
+    email_sent = send_escalation_email(
+        authority["email"],
+        authority["authority_name"],
+        letter,
+        issue["title"],
+    )
+
+    # Step 4: persist escalation state
+    update_issue_escalated(issue_id, authority["authority_name"], authority["email"], letter)
+
+    return {
+        "success": True,
+        "issue_id": issue_id,
+        "authority": authority,
+        "letter_preview": letter[:400] + ("..." if len(letter) > 400 else ""),
+        "email_sent": email_sent,
+    }
+
+async def run_batch_escalation() -> list:
+    """Process all confirmed issues that haven't been escalated yet."""
+    ready = get_issues_ready_for_escalation()
+    print(f"[Resolution] {len(ready)} issue(s) ready for escalation")
+    results = []
+    for issue in ready:
+        result = await escalate_issue(issue["id"])
+        results.append(result)
+    return results
